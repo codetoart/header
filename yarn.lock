@@ -3027,6 +3027,11 @@ shebang-regex@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-1.0.0.tgz#da42f49740c0b42db2ca9728571cb190c98efea3"
 
+short-unique-id@^3.2.0:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/short-unique-id/-/short-unique-id-3.2.0.tgz#e7bc1c01908495a61b8613201a018c9a3db4a0e7"
+  integrity sha512-CAO0U4AOJs/3R8tFz+pt8WIscxQte0VZ6DXD0E413p/ujpa/KNdRGwVSmTiGNWOBvSiThVcG0wm8zaWHAZcCsA==
+
 signal-exit@^3.0.0:
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-3.0.3.tgz#a1410c2edd8f077b08b4e253c8eacfcaf057461c"

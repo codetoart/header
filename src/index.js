@@ -2,6 +2,8 @@
  * Build styles
  */
 require('./index.css').toString();
+const { default: ShortUniqueId } = require('short-unique-id');
+const uid = new ShortUniqueId();
 
 /**
  * @typedef {object} HeaderData
@@ -27,6 +29,10 @@ require('./index.css').toString();
  * @version 2.0.0
  */
 class Header {
+  // static get enableLineBreaks() {/**prevent enter event of editor so that anchor should work */
+  //   return true;
+  // }
+
   /**
    * Render plugin`s main Element and fill it with saved data
    *
@@ -82,6 +88,20 @@ class Header {
      * @private
      */
     this._element = this.getTag();
+
+    /**
+     * Block's anchor
+     * if anchor is not present is users data,
+     * then find it from slugify method using user text
+     */
+    this._anchor = this.getAnchorValue();
+
+    /**
+     * Block's anchor flag
+     * true: show editor
+     * false: hide editor (default value)
+     */
+    this._showAnchorEditor = false;
   }
 
   /**
@@ -101,8 +121,36 @@ class Header {
 
     newData.text = data.text || '';
     newData.level = parseInt(data.level) || this.defaultLevel.number;
+    newData.anchor = data.anchor || '';
 
     return newData;
+  }
+
+  /**
+   * get anchor value
+   */
+  getAnchorValue() {
+    return this._data.anchor || this.slugify(this._data.text);
+  }
+
+  /**
+   * Slugify anchor from anchor text
+   * @param {string} string - convert string into slug format
+   */
+  slugify(string) {
+    const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;'
+    const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------'
+    const p = new RegExp(a.split('').join('|'), 'g')
+
+    return string.toString().toLowerCase()
+      .replace(/\s+/g, '-') // Replace spaces with -
+      .replace(p, c => b.charAt(a.indexOf(c))) // Replace special characters
+      .replace(/&/g, '-and-') // Replace & with 'and'
+      .replace(/[^\w\-]+/g, '') // Remove all non-word characters
+      .replace(/\-\-+/g, '-') // Replace multiple - with single -
+      .replace(/^-+/, '') // Trim - from start of text
+      .replace(/-+$/, '') // Trim - from end of text
+      + ((string) ? '-' + uid() : uid()) //append uid: unique number
   }
 
   /**
@@ -112,7 +160,105 @@ class Header {
    * @public
    */
   render() {
-    return this._element;
+    this.wDiv = document.createElement('div');
+    this.wDiv.classList.add('wDiv');
+
+    //anchor editor
+    this.anchorEditorWrapper = document.createElement('div');
+    this.anchorEditorWrapper.classList.add('anchorEditorWrapper');
+    this.setAnchorEditorWrapperPosition();
+
+    if (this._showAnchorEditor) {
+      this.anchorEditorWrapper.classList.add('show');
+    }
+
+    //add new span if not exists
+    // if (this.anchorEditorWrapper.getElementsByClassName('preSpan').length === 0) {
+    //   this.preSpan = document.createElement('span');
+    //   this.preSpan.innerHTML = this.readOnly ? '' : "/#";
+    //   this.preSpan.classList.add('preSpan');
+    //   this.anchorEditorWrapper.appendChild(this.preSpan);
+    // }
+
+    //span to show /#
+    // this.preSpan = document.createElement('span');
+    // this.preSpan.innerHTML = this.readOnly ? '' : "/#";
+    // this.preSpan.classList.add('preSpan');
+    // this.anchorEditorWrapper.appendChild(this.preSpan);
+
+    //anchor input field
+    this.anchorInputField = document.createElement('input');
+    this.anchorInputField.placeholder = "Add anchor";
+    this.anchorInputField.value = this._anchor;
+    this.anchorInputField.classList.add("anchorInputField");
+
+    //on focus out event save and exit
+    this.anchorInputField.addEventListener('focusout', (e) => {
+      this.linkAnchorToDiv();
+    });
+
+    this.anchorInputField.addEventListener('keydown', (e) => {
+      var code = (e.keyCode ? e.keyCode : e.which);
+      if (code === 27) {//escape keycode
+        this.anchorInputField.value = this._anchor;
+        this.tag.id = this._anchor;
+        this.hideAnchorEditor();
+        return;
+      }
+      // if (code === 13) {//enter keycode
+      //   this.linkAnchorToDiv();
+      //   return;
+      // }
+    });
+
+    this.anchorEditorWrapper.appendChild(this.anchorInputField);
+
+    //save and hide editor button
+    this.saveAnchorButton = document.createElement('div');
+    this.saveAnchorButton.innerHTML = require('./../assets/check.svg').default;
+    this.saveAnchorButton.classList.add('saveAnchorButton');
+    this.saveAnchorButton.title = "Save";
+    this.saveAnchorButton.addEventListener('click', (e) => {
+      this.linkAnchorToDiv();
+    });
+    this.anchorEditorWrapper.appendChild(this.saveAnchorButton);
+
+    this.wDiv.appendChild(this.anchorEditorWrapper);
+
+    //add header in wrapper
+    this.wDiv.appendChild(this._element);
+
+    return this.wDiv;
+
+    /**
+     * old code
+     */
+    // return this._element;
+  }
+
+  /**
+   * Save anchor from input field to appropriate id 
+   * hide the anchor editor
+   */
+  linkAnchorToDiv() {
+    this._anchor = this.anchorInputField.value;
+    this.tag.id = this._anchor;
+    this.hideAnchorEditor();
+  }
+
+  /**
+   * set anchor editor position depend on header level
+   */
+  setAnchorEditorWrapperPosition() {
+    var currentLevel = this._data.level;
+    var val = '0';
+    switch (currentLevel) {
+      case 1: val = '100px'; break;
+      case 2: val = '90px'; break;
+      case 3: val = '60px'; break;
+      default: val = '40px'; break;
+    }
+    this.anchorEditorWrapper.style.top = val;
   }
 
   /**
@@ -133,6 +279,7 @@ class Header {
       const selectTypeButton = document.createElement('SPAN');
 
       selectTypeButton.classList.add(this._CSS.settingsButton);
+      selectTypeButton.classList.add("mySettingsButton");
 
       /**
        * Highlight current level button
@@ -156,6 +303,7 @@ class Header {
        */
       selectTypeButton.addEventListener('click', () => {
         this.setLevel(level.number);
+        this.setAnchorEditorWrapperPosition();
       });
 
       /**
@@ -169,7 +317,50 @@ class Header {
       this.settingsButtons.push(selectTypeButton);
     });
 
+    /**
+     * Add anchor editor flag button
+     */
+    this.anchorEditorButton = document.createElement('SPAN');
+    this.anchorEditorButton.classList.add('myAnchorEditorButton');
+    this.anchorEditorButton.classList.add(this._CSS.settingsButton);
+    if (this._showAnchorEditor) {
+      this.anchorEditorButton.classList.add(this._CSS.settingsButtonActive);
+      this.anchorEditorButton.classList.add("active");
+    }
+    this.anchorEditorButton.title = "Anchor";
+    // this.anchorEditorButton.innerHTML = require('./../assets/link.svg').default;
+    this.anchorEditorButton.innerHTML = require('./../assets/anchorText.svg').default;
+    this.anchorEditorButton.addEventListener('click', () => {
+      this.showAnchorEditor();
+    });
+    holder.appendChild(this.anchorEditorButton);
+    this.settingsButtons.push(this.anchorEditorButton);
+
     return holder;
+  }
+
+  toggleAnchorEditor() {
+    if (this._showAnchorEditor) {
+      this.hideAnchorEditor();
+    } else {
+      this.showAnchorEditor();
+    }
+  }
+
+  showAnchorEditor() {
+    this._showAnchorEditor = true;//make it true
+    this.anchorEditorButton.classList.add(this._CSS.settingsButtonActive);//add active classes
+    this.anchorEditorButton.classList.add("active");
+    this.anchorEditorWrapper.classList.add('show');//show anchor editor
+    this.anchorInputField.value = this._anchor;//reset input value to anchor
+    this.anchorInputField.focus();
+  }
+
+  hideAnchorEditor() {
+    this._showAnchorEditor = false;//make it false
+    this.anchorEditorButton.classList.remove(this._CSS.settingsButtonActive);//remove active classes
+    this.anchorEditorButton.classList.remove("active");
+    this.anchorEditorWrapper.classList.remove('show');//hide anchor editor
   }
 
   /**
@@ -230,6 +421,7 @@ class Header {
     return {
       text: toolsContent.innerHTML,
       level: this.currentLevel.number,
+      anchor: this._anchor,
     };
   }
 
@@ -335,29 +527,34 @@ class Header {
     /**
      * Create element for current Block's level
      */
-    const tag = document.createElement(this.currentLevel.tag);
+    this.tag = document.createElement(this.currentLevel.tag);
 
     /**
      * Add text to block
      */
-    tag.innerHTML = this._data.text || '';
+    this.tag.innerHTML = this._data.text || '';
+
+    /**
+     * Add id to block
+     */
+    this.tag.id = this.getAnchorValue();
 
     /**
      * Add styles class
      */
-    tag.classList.add(this._CSS.wrapper);
+    this.tag.classList.add(this._CSS.wrapper);
 
     /**
      * Make tag editable
      */
-    tag.contentEditable = this.readOnly ? 'false' : 'true';
+    this.tag.contentEditable = this.readOnly ? 'false' : 'true';
 
     /**
      * Add Placeholder
      */
-    tag.dataset.placeholder = this.api.i18n.t(this._settings.placeholder || '');
+    this.tag.dataset.placeholder = this.api.i18n.t(this._settings.placeholder || '');
 
-    return tag;
+    return this.tag;
   }
 
   /**
@@ -432,7 +629,7 @@ class Header {
         number: 3,
         tag: 'H3',
         svg: '<svg width="18" height="14" xmlns="http://www.w3.org/2000/svg"><path d="M2.152 1.494V4.98h4.646V1.494c0-.498.097-.871.293-1.12A.934.934 0 0 1 7.863 0c.324 0 .586.123.786.37.2.246.301.62.301 1.124v9.588c0 .503-.101.88-.304 1.128a.964.964 0 0 1-.783.374.928.928 0 0 1-.775-.378c-.194-.251-.29-.626-.29-1.124V6.989H2.152v4.093c0 .503-.101.88-.304 1.128a.964.964 0 0 1-.783.374.928.928 0 0 1-.775-.378C.097 11.955 0 11.58 0 11.082V1.494C0 .996.095.623.286.374A.929.929 0 0 1 1.066 0c.323 0 .585.123.786.37.2.246.3.62.3 1.124zm11.61 4.919c.418 0 .778-.123 1.08-.368.301-.245.452-.597.452-1.055 0-.35-.12-.65-.36-.902-.241-.252-.566-.378-.974-.378-.277 0-.505.038-.684.116a1.1 1.1 0 0 0-.426.306 2.31 2.31 0 0 0-.296.49c-.093.2-.178.388-.255.565a.479.479 0 0 1-.245.225.965.965 0 0 1-.409.081.706.706 0 0 1-.5-.22c-.152-.148-.228-.345-.228-.59 0-.236.071-.484.214-.745a2.72 2.72 0 0 1 .627-.746 3.149 3.149 0 0 1 1.024-.568 4.122 4.122 0 0 1 1.368-.214c.44 0 .842.06 1.205.18.364.12.679.294.947.52.267.228.47.49.606.79.136.3.204.622.204.967 0 .454-.099.843-.296 1.168-.198.324-.48.64-.848.95.354.19.653.408.895.653.243.245.426.516.548.813.123.298.184.619.184.964 0 .413-.083.812-.248 1.198-.166.386-.41.73-.732 1.031a3.49 3.49 0 0 1-1.147.708c-.443.17-.932.256-1.467.256a3.512 3.512 0 0 1-1.464-.293 3.332 3.332 0 0 1-1.699-1.64c-.142-.314-.214-.573-.214-.777 0-.263.085-.475.255-.636a.89.89 0 0 1 .637-.242c.127 0 .25.037.367.112a.53.53 0 0 1 .232.27c.236.63.489 1.099.759 1.405.27.306.65.46 1.14.46a1.714 1.714 0 0 0 1.46-.824c.17-.273.256-.588.256-.947 0-.53-.145-.947-.436-1.249-.29-.302-.694-.453-1.212-.453-.09 0-.231.01-.422.028-.19.018-.313.027-.367.027-.25 0-.443-.062-.579-.187-.136-.125-.204-.299-.204-.521 0-.218.081-.394.245-.528.163-.134.406-.2.728-.2h.28z"/></svg>',
-      },
+      },/*
       {
         number: 4,
         tag: 'H4',
@@ -447,7 +644,7 @@ class Header {
         number: 6,
         tag: 'H6',
         svg: '<svg width="18" height="14" xmlns="http://www.w3.org/2000/svg"><path d="M2.152 1.494V4.98h4.646V1.494c0-.498.097-.871.293-1.12A.934.934 0 0 1 7.863 0c.324 0 .586.123.786.37.2.246.301.62.301 1.124v9.588c0 .503-.101.88-.304 1.128a.964.964 0 0 1-.783.374.928.928 0 0 1-.775-.378c-.194-.251-.29-.626-.29-1.124V6.989H2.152v4.093c0 .503-.101.88-.304 1.128a.964.964 0 0 1-.783.374.928.928 0 0 1-.775-.378C.097 11.955 0 11.58 0 11.082V1.494C0 .996.095.623.286.374A.929.929 0 0 1 1.066 0c.323 0 .585.123.786.37.2.246.3.62.3 1.124zM12.53 7.058a3.093 3.093 0 0 1 1.004-.814 2.734 2.734 0 0 1 1.214-.264c.43 0 .827.08 1.19.24.365.161.684.39.957.686.274.296.485.645.635 1.048a3.6 3.6 0 0 1 .223 1.262c0 .637-.145 1.216-.437 1.736-.292.52-.699.926-1.221 1.218-.522.292-1.114.438-1.774.438-.76 0-1.416-.186-1.967-.557-.552-.37-.974-.919-1.265-1.645-.292-.726-.438-1.613-.438-2.662 0-.855.088-1.62.265-2.293.176-.674.43-1.233.76-1.676.33-.443.73-.778 1.2-1.004.47-.226 1.006-.339 1.608-.339.579 0 1.089.113 1.53.34.44.225.773.506.997.84.224.335.335.656.335.964 0 .185-.07.354-.21.505a.698.698 0 0 1-.536.227.874.874 0 0 1-.529-.18 1.039 1.039 0 0 1-.36-.498 1.42 1.42 0 0 0-.495-.655 1.3 1.3 0 0 0-.786-.247c-.24 0-.479.069-.716.207a1.863 1.863 0 0 0-.6.56c-.33.479-.525 1.333-.584 2.563zm1.832 4.213c.456 0 .834-.186 1.133-.56.298-.373.447-.862.447-1.468 0-.412-.07-.766-.21-1.062a1.584 1.584 0 0 0-.577-.678 1.47 1.47 0 0 0-.807-.234c-.28 0-.548.074-.804.224-.255.149-.461.365-.617.647a2.024 2.024 0 0 0-.234.994c0 .61.158 1.12.475 1.527.316.407.714.61 1.194.61z"/></svg>',
-      },
+      },*/
     ];
 
     return this._settings.levels ? availableLevels.filter(

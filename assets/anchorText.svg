@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" id="svgcontent">
+  <text x="5" y="24" >Change Anchor</text>
+</svg>
+
+<!--
+  myAnchorEditorButton: width:130
+  svg x:5
+  mysettingsbutton: 9px padding
+-->
+<!--
+  myAnchorEditorButton: width:119
+  svg x:0
+  mysettingsbutton: 5px padding
+-->
